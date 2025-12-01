@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: myapp
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: thanh2909/simple-fullstack-docker-v3-ci-tests-api:v0.4
+          ports:
+            - containerPort: 8000
+          env:
+            # DB, JWT từ secret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: JWT_EXPIRE_MINUTES
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_EXPIRE_MINUTES
+
+            # MinIO nội bộ trong cluster
+            - name: MINIO_ENDPOINT
+              value: "http://minio-svc.myapp.svc.cluster.local:9000"
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: accesskey
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: secretkey
+            - name: MINIO_BUCKET
+              value: "my-bucket"
+            - name: MINIO_SECURE
+              value: "false"
+            # URL public để FE truy cập file (qua ingress)
+            - name: MINIO_PUBLIC_URL
+              value: "https://your-domain-or-ip/minio-public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-svc
+  namespace: myapp
+spec:
+  type: ClusterIP
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8000

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-worker
+  namespace: myapp
+  labels:
+    app: minio-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-worker
+  template:
+    metadata:
+      labels:
+        app: minio-worker
+    spec:
+      containers:
+        - name: worker
+          image: alpine:3.18
+          command: ["sh", "-c", "sleep 3600"]
+          volumeMounts:
+            - name: minio-data
+              mountPath: /mnt/minio-data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc

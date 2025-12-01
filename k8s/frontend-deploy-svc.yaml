@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: myapp
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: thanh2909/simple-fullstack-docker-v3-ci-tests-frontend:v0.3
+          ports:
+            - containerPort: 80
+          env:
+            - name: API_BASE
+              valueFrom:
+                configMapKeyRef:
+                  name: frontend-config
+                  key: API_BASE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: myapp
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80

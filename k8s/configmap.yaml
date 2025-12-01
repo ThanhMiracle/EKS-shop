@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: myapp
+data:
+  API_BASE: "https://your-domain-or-ip/api"
