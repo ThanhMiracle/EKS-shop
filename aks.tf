@@ -2,7 +2,7 @@
 # AKS
 #####################################
 resource "azurerm_kubernetes_cluster" "aks" {
-  name                = "${var.project_name}-aks-${local.suffix}"
+  name                = "${var.project_name}-aks"
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
   dns_prefix          = "${var.project_name}-dns-${local.suffix}"
@@ -18,8 +18,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   network_profile {
-    network_plugin = "azure"
-    #sku            = "Standard"
+    network_plugin    = "azure"
+    load_balancer_sku = "standard"
+    # outbound_type   = "loadBalancer"  # có thể bật thêm nếu cần
   }
 
   role_based_access_control_enabled = true

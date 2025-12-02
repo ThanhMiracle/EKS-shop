@@ -8,5 +8,5 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 330Gi
+      storage: 5Gi
   storageClassName: azurefile-csi

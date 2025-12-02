@@ -14,3 +14,7 @@ kubectl create secret generic azurefiles-secret \
   --namespace myapp \
   --from-literal=azurestorageaccountname="<STORAGE_ACCOUNT_NAME>" \
   --from-literal=azurestorageaccountkey="<STORAGE_KEY>"
+
+
+terraform output -raw kube_config_raw > kubeconfig
+export KUBECONFIG=./kubeconfig
