@@ -4,4 +4,4 @@ metadata:
   name: frontend-config
   namespace: myapp
 data:
-  API_BASE: "https://your-domain-or-ip/api"
+  API_BASE: "http://135.171.22.205.nip.io/api"

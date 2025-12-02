@@ -1,0 +1,154 @@
+# 1. Secret Azure Files (dùng để mount Azure Files)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-file-secret
+  namespace: myapp
+type: Opaque
+stringData:
+  azurestorageaccountname: "st2mxal"
+  azurestorageaccountkey: "Gg/TU2PaV63ki7iddj8XDRrPy3x3fY7H3mKH0ckP3C7IS1H11bAEJqaqkd1gjsfRLzcahI/I3SYq+AStjMdYkw=="
+
+---
+# 2. PV trỏ vào Azure Files share "minio-data"
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: minio-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: azurefile-csi
+  csi:
+    driver: file.csi.azure.com
+    volumeHandle: minio-data-pv      # chỉ cần unique, bạn đặt gì cũng được
+    readOnly: false
+    volumeAttributes:
+      shareName: minio-data          # trùng với azurerm_storage_share.minio_share.name
+    nodeStageSecretRef:
+      name: azure-file-secret
+      namespace: myapp
+
+---
+# 3. PVC dùng PV trên
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: myapp
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: minio-pv               # đảm bảo bind đúng vào PV này
+
+---
+# 4. Secret MinIO (root user/password)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secret
+  namespace: myapp
+type: Opaque
+stringData:
+  accesskey: minioadmin
+  secretkey: minioadmin123
+
+---
+# 5. Deployment + Service MinIO
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: myapp
+  labels:
+    app: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: accesskey
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: secretkey
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-svc
+  namespace: myapp
+spec:
+  type: ClusterIP
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+
+---
+# 6. Worker test mount (không bắt buộc, nhưng rất tiện debug)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-worker
+  namespace: myapp
+  labels:
+    app: minio-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-worker
+  template:
+    metadata:
+      labels:
+        app: minio-worker
+    spec:
+      containers:
+        - name: worker
+          image: alpine:3.18
+          command: ["sh", "-c", "echo 'worker started'; sleep 3600"]
+          volumeMounts:
+            - name: minio-data
+              mountPath: /mnt/minio-data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc

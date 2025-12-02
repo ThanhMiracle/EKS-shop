@@ -57,7 +57,7 @@ spec:
               value: "false"
             # URL public để FE truy cập file (qua ingress)
             - name: MINIO_PUBLIC_URL
-              value: "https://your-domain-or-ip/minio-public"
+              value: "http://135.171.22.205.nip.io/minio-public"
 ---
 apiVersion: v1
 kind: Service
@@ -71,3 +71,15 @@ spec:
   ports:
     - port: 80
       targetPort: 8000
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: myapp
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://pgadmin:P%40ssw0rd1234@myapp-pg.postgres.database.azure.com:5432/appdb?sslmode=require"
+  JWT_SECRET: "minioadmin123"
+  JWT_EXPIRE_MINUTES: "60"
+
